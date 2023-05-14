@@ -1,0 +1,34 @@
+---
+admin_email: webmaster@localhost
+config_dest: /etc/apache2/sites-enabled/000-default.conf
+web_dest: /var/www/html/wordpress/
+http_port: 80
+Server_Name: 16.16.98.221
+
+
+mysql_root_password : 'admin@123'
+
+
+
+vault_admin_password: admin@123
+
+
+wordpress_db_name: employee
+wordpress_user : jazz
+
+package_list:
+      - apache2
+      - mysql-server
+      - php-fpm
+      - php-mysql
+      - php-curl
+      - php-gd
+      - php-mbstring
+      - php-xml
+      - php-xmlrpc
+      - php-zip
+
+local_dir: "/mnt/e/wordpress"
+remote_dir: "/var/www/html"
+ansible_python_interpreter: /usr/bin/python3
+wordpress_user : admin

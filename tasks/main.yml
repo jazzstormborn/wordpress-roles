@@ -1,0 +1,98 @@
+---
+    - name: Install required packages
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ package_list }}"
+
+    - name: Install WordPress files
+      synchronize:
+        src: "{{ local_dir }}"
+        dest: "{{ remote_dir }}"
+        delete: yes
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Create WordPress directory
+      ansible.builtin.file:
+        path: /var/www/wordpress
+        state: directory
+        owner: www-data
+        group: www-data
+        mode: '0755'
+
+    - name: Install MySQL Python library
+      apt:
+        name: python3-mysqldb
+        state: present
+      become: true
+
+    - name: Install MySQL client package
+      apt:
+        name: mysql-client
+        state: present
+
+    - name: Create MySQL database
+      mysql_db:
+        name: "{{ wordpress_db_name }}"
+        state: present
+
+
+    - name: Create user for WordPress database
+      mysql_user:
+        name: "{{ wordpress_user }}"
+        password: "{{ vault_admin_password }}"
+        priv: "{{ wordpress_db_name }}.*:ALL"
+        state: present
+
+    - name: Create MySQL user with privileges
+      mysql_user:
+        name: "{{ wordpress_user}}"
+        password: "{{ vault_admin_password }}"
+        priv: "{{ wordpress_db_name }}.*:ALL"
+        host: localhost
+        state: present
+      become: true
+
+
+    - name: Copy virtual host configuration file
+      template:
+        src: templates/wordpress.conf.j2
+        dest: /etc/apache2/sites-available/wordpress.conf
+        mode: 0644
+
+    - name: Copy wp-config-sample.php to wp-config.php
+      ansible.builtin.copy:
+        src: /mnt/e/wordpress/wp-config-sample.php
+        dest: /var/www/html/wordpress/wp-config.php
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Replace database name in wp-config.php
+      become: true
+      replace:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: 'database_name_here'
+        replace: "{{ wordpress_db_name }}"
+
+    - name: Replace database username in wp-config.php
+      become: true
+      replace:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: 'username_here'
+        replace: "{{ wordpress_user}}"
+
+
+
+    - name: Replace database password in wp-config.php
+      become: true
+      replace:
+        path: /var/www/html/wordpress/wp-config.php
+        regexp: 'password_here'
+        replace: "{{ vault_admin_password }}"
+
+ 
+    - name: Restart apache
+      ansible.builtin.service:
+        name: apache2
+        state: restarted
